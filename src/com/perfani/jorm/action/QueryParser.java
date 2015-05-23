@@ -123,7 +123,7 @@ public class QueryParser
 		return String.join(" AND ", listPrimaryKeysString);
 	}
 	
-	private static String getColumnsValuesSeparatedByCommas(Object obj)
+	private static String getColumnsValuesSeparatedByCommas(Object obj, boolean isInsert)
 			throws IllegalArgumentException, IllegalAccessException, InvalidEntityException
 	{
 		ArrayList<String> columnValues = new ArrayList<String>();
@@ -147,20 +147,18 @@ public class QueryParser
 				continue;
 			}
 			
+			currentField.setAccessible(true);
+			Object fieldValue = currentField.get(obj);
+			
 			if (currentField.isAnnotationPresent(PrimaryKey.class))
 			{
 				pk = (PrimaryKey) currentField.getAnnotation(PrimaryKey.class);
 				
-				if (pk.autoIncrement())
-				{
-					columnValues.add(" ");
-				}
+				columnValues.add(pk.autoIncrement() && isInsert ? " " 
+							: parseValueToCompatibleQueryString(fieldValue));
 				
 				continue;
-			}
-			
-			currentField.setAccessible(true);
-			Object fieldValue = currentField.get(obj);
+			}			
 			
 			columnValues.add(parseValueToCompatibleQueryString(fieldValue));
 		}
@@ -229,7 +227,7 @@ public class QueryParser
 		return String.format("INSERT INTO %s (%s) VALUES (%s)",
 							 getEntityName(obj),
 							 getColumnsSeparatedByCommas(obj),
-							 getColumnsValuesSeparatedByCommas(obj));
+							 getColumnsValuesSeparatedByCommas(obj, true));
 	}
 	
 	public static String getUpdateByIdQuery(Object obj) 
